@@ -47,66 +47,20 @@ namespace crypt
 			}
 		}
 
-		//constexpr char affine_encrypt(char c, int a, int b, int mod = 26) 
-		//{
-		//	char base{};
-		//	if (c >= 'A' && c <= 'Z')
-		//	{
-		//		base = 'A';
-		//	}
-		//	else if (c >= 'a' && c <= 'z') 
-		//	{
-		//		base = 'a';
-		//	}
-		//	else 
-		//	{
-		//		return c; 
-		//	}
-
-		//	int x = c - base;
-		//	int encrypted = (a * x + b) % mod;
-		//	if (encrypted < 0) encrypted += mod;
-		//	return static_cast<char>(encrypted + base);
-		//}
-		//constexpr int mod_inverse(int a, int m) 
-		//{
-		//	int t = 0, new_t = 1;
-		//	int r = m, new_r = a;
-		//	while (new_r != 0) 
-		//	{
-		//		int quotient = r / new_r;
-		//		t = t - quotient * new_t;
-		//		func::swap(t, new_t);
-		//		r = r - quotient * new_r;
-		//		func::swap(r, new_r);
-		//	}
-		//	if (r > 1) return 0; 
-		//	if (t < 0) t = t + m;
-		//	return t;
-		//}
-		//constexpr char affine_decrypt(char c, int a, int b, int mod = 26) 
-		//{
-		//	char base{};
-		//	if (c >= 'A' && c <= 'Z') {
-		//		base = 'A';
-		//	}
-		//	else if (c >= 'a' && c <= 'z') {
-		//		base = 'a';
-		//	}
-		//	else {
-		//		return c; 
-		//	}
-
-		//	int a_inv = mod_inverse(a, mod);
-
-		//	if (a_inv == 0) 
-		//		return c; 
-
-		//	int y = c - base;
-		//	int decrypted = (a_inv * (y - b + mod)) % mod;
-		//	if (decrypted < 0) decrypted += mod; 
-		//	return static_cast<char>(decrypted + base);
-		//}
+		//affine
+		constexpr int find_id(char c) 
+		{
+			if (c >= 'A' && c <= 'Z') 
+				return c - 'A';
+			if (c >= 'a' && c <= 'z') 
+				return c - 'a';  
+			return -1;  
+		}
+		
+		//affine
+		constexpr char find_char(int id, bool is_upper) {
+			return is_upper ? 'A' + id : 'a' + id;
+		}
 
 		/*~~~~~~~~~~~~~RSA~~~~~~~~~~~~~~~*/
 		//constexpr long int mod_exp(long int base, long int exp, long int mod) 
@@ -261,27 +215,78 @@ namespace crypt
 		return result;
 	}
 
-	//template<std::size_t len>
-	//constexpr std::array<char, len> affine_encrypt(const char(&input)[len], int a, int b, int mod = 26)
-	//{
-	//	std::array<char, len> encrypted{};
-	//	for (std::size_t i = 0; i < len; ++i) 
-	//	{
-	//		encrypted[i] = func::affine_encrypt(input[i], a, b, mod);
-	//	}
-	//	return encrypted;
-	//}
+	//Affine cipher
+	template<std::size_t len>
+	constexpr std::array<char, len> affine_encrypt(const char(&input)[len], int a, int b, int mod = 26)
+	{
+		std::array<char, len> result{};
+		
+		for (std::size_t i = 0; i < len - 1; ++i) 
+		{ 
+			char c = input[i];
+			bool is_upper = (c >= 'A' && c <= 'Z');
+			bool is_lower = (c >= 'a' && c <= 'z');
 
-	//template<std::size_t len>
-	//constexpr std::array<char, len> affine_decrypt(const char(&input)[len], int a, int b, int mod = 26) 
-	//{
-	//	std::array<char, len> decrypted{};
-	//	for (std::size_t i = 0; i < len; ++i) 
-	//	{
-	//		decrypted[i] = func::affine_decrypt(input[i], a, b, mod);
-	//	}
-	//	return decrypted;
-	//}
+			if (is_upper || is_lower) 
+			{
+				int id = func::find_id(c);
+
+				if (id != -1) 
+				{
+					
+					int encrypted_id = (a * id + b) % mod;
+					result[i] = func::find_char(encrypted_id, is_upper);
+				}
+			}
+			else 
+			{
+				
+				result[i] = c;
+			}
+		}
+
+		return result;
+	}
+
+	template<std::size_t len>
+	constexpr std::array<char, len> affine_decrypt(const char(&input)[len], int a, int b, int mod = 26) 
+	{
+		std::array<char, len> result{};
+
+		int modInverse = 0;
+		int a_mod = a % mod;
+		for (int x = 1; x < mod; ++x) 
+		{
+			if ((a_mod * x) % mod == 1)
+			{
+				modInverse = x;
+			}
+		}
+
+		for (std::size_t i = 0; i < len - 1; ++i)
+		{
+			char c = input[i];
+			bool is_upper = (c >= 'A' && c <= 'Z');
+			bool is_lower = (c >= 'a' && c <= 'z');
+
+			if (is_upper || is_lower)
+			{
+				int id = func::find_id(c);
+
+				if (id != -1)
+				{
+					int encrypted_id = (modInverse * (id + mod - b)) % mod;
+					result[i] = func::find_char(encrypted_id, is_upper);
+				}
+			}
+			else
+			{
+				result[i] = c;
+			}
+		}
+
+		return result;
+	}
 
 	
 	//RC4, generates a pseudo-random keystream which is then used for XOR
